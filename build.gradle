@@ -43,9 +43,11 @@ sourceSets {
             srcDirs = ['build-gradle/proto-src']
         }
         resources {
-            srcDirs = ['src/java']
+            srcDirs = ['src/java', 'prebuilt-resources']
             include '**/*.soy'
             include '**/*.css'
+            include '**/*.js'
+            include '**/*.map'
             include '**/resources/**'
         }
     }
@@ -111,3 +113,9 @@ tasks.register('stageProtos', Copy) {
 }
 
 tasks.named('compileJava') { dependsOn 'generateProto' }
+
+tasks.named('processResources') {
+    // src/java and the extracted prebuilt tree both carry an (identical)
+    // dossier.css; prefer the prebuilt jar copy. It's the only overlap.
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
