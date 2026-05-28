@@ -11,7 +11,7 @@ plugins {
 layout.buildDirectory.set(layout.projectDirectory.dir('build-gradle'))
 
 // Gate B sweeps the bundled closure-compiler. Default reproduces Gate A.
-def ccVersion = (project.findProperty('ccVersion') ?: 'v20190819').toString()
+def ccVersion = (project.findProperty('ccVersion') ?: 'v20200927').toString()
 // Newer closure-compiler releases stopped publishing a separate -externs
 // artifact; allow disabling it with -PccExterns=none.
 def ccExterns = (project.findProperty('ccExterns') ?: ccVersion).toString()
