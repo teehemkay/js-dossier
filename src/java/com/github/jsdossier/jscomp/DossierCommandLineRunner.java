@@ -58,7 +58,6 @@ public final class DossierCommandLineRunner extends CommandLineRunner implements
   private static final ImmutableSet<String> CHECKS =
       ImmutableSet.of(
           "accessControls",
-          "ambiguousFunctionDecl",
           "checkRegExp",
           "checkTypes",
           "checkVars",
@@ -67,7 +66,6 @@ public final class DossierCommandLineRunner extends CommandLineRunner implements
           "duplicateMessage",
           "es5Strict",
           "externsValidation",
-          "fileoverviewTags",
           "globalThis",
           "invalidCasts",
           "missingProperties",
