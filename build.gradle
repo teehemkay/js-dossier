@@ -10,6 +10,14 @@ plugins {
 // of touching BUILD (which the spike must leave intact).
 layout.buildDirectory.set(layout.projectDirectory.dir('build-gradle'))
 
+// Gate B sweeps the bundled closure-compiler. Default reproduces Gate A.
+def ccVersion = (project.findProperty('ccVersion') ?: 'v20190819').toString()
+// Newer closure-compiler releases stopped publishing a separate -externs
+// artifact; allow disabling it with -PccExterns=none.
+def ccExterns = (project.findProperty('ccExterns') ?: ccVersion).toString()
+// DRY the staged-proto import root (was hardcoded as 'build-gradle/proto-src').
+def protoSrcDir = layout.buildDirectory.dir('proto-src')
+
 repositories {
     mavenCentral()
     maven { url 'https://maven.google.com' }
@@ -42,7 +50,7 @@ sourceSets {
             // from the Maven 'types' jar, and regenerating them would collide
             // in the fat jar (the sealing-violation hazard the Bazel BUILD
             // warns about).
-            srcDirs = ['build-gradle/proto-src']
+            srcDirs = [protoSrcDir.get().asFile]
         }
         resources {
             srcDirs = ['src/java', 'prebuilt-resources']
@@ -56,8 +64,7 @@ sourceSets {
 }
 
 dependencies {
-    implementation 'com.google.javascript:closure-compiler-unshaded:v20190819'
-    implementation 'com.google.javascript:closure-compiler-externs:v20190819'
+    implementation "com.google.javascript:closure-compiler-unshaded:${ccVersion}"
     implementation 'com.google.template:soy:2019-08-22'
     implementation 'com.google.guava:guava:27.0.1-jre'
     implementation 'com.google.inject:guice:4.1.0'
@@ -85,12 +92,29 @@ dependencies {
     // auto-service-annotations was only split out in 1.0-rc6+; at rc4 the
     // @AutoService annotation ships in the main auto-service jar.
     compileOnly 'com.google.auto.service:auto-service:1.0-rc4'
+    if (ccExterns != 'none') {
+        implementation "com.google.javascript:closure-compiler-externs:${ccExterns}"
+    }
+}
+
+// Probe 1 (floor): the *shaded* closure-compiler distribution carries the
+// CommandLineRunner CLI and is self-contained (java -jar). transitive=false
+// keeps it to just that one jar.
+configurations { compilerCli { transitive = false } }
+dependencies { compilerCli "com.google.javascript:closure-compiler:${ccVersion}" }
+tasks.register('copyCompilerCli', Copy) {
+    from configurations.compilerCli
+    into layout.buildDirectory.dir('compiler-cli')
 }
 
 protobuf {
-    // protoc 3.9.0 (2019) ships no osx-aarch_64 build; force the x86_64 binary,
-    // which runs under Rosetta 2. Keeps the exact protoc version 0.15.0 used.
-    protoc { artifact = 'com.google.protobuf:protoc:3.9.0:osx-x86_64@exe' }
+    // protoc 3.9.0 predates Apple Silicon: on macOS force the x86_64 build
+    // (runs under Rosetta); on Linux/CI let the plugin auto-detect the host.
+    protoc {
+        artifact = System.getProperty('os.name').toLowerCase().contains('mac')
+            ? 'com.google.protobuf:protoc:3.9.0:osx-x86_64@exe'
+            : 'com.google.protobuf:protoc:3.9.0'
+    }
     generateProtoTasks {
         all().configureEach { task ->
             task.dependsOn 'stageProtos'
@@ -110,7 +134,7 @@ protobuf {
 // build-gradle/extracted-include-protos dir and make protoc double-load the
 // bundled well-known protos.
 tasks.register('stageProtos', Copy) {
-    into layout.buildDirectory.dir('proto-src')
+    into protoSrcDir
     from('src/proto') { into 'src/proto'; include '*.proto' }
 }
 
