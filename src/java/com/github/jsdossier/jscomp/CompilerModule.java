@@ -106,7 +106,10 @@ public final class CompilerModule extends AbstractModule {
 
     options.setModuleRoots(ImmutableList.of());
 
-    options.setLanguageIn(LanguageMode.STABLE_IN);
+    // STABLE_IN tops out at ECMASCRIPT_2019 in this compiler, which rejects the
+    // nullish-coalescing (??) and optional-chaining (?.) in modern closure-library.
+    // ECMASCRIPT_NEXT is the input level proven to parse the full source corpus.
+    options.setLanguageIn(LanguageMode.ECMASCRIPT_NEXT);
     options.setLanguageOut(LanguageMode.STABLE_OUT);
 
     options.setCodingConvention(new ClosureCodingConvention());
