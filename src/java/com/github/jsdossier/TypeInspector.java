@@ -918,7 +918,7 @@ final class TypeInspector {
       return ImmutableList.of();
     }
 
-    List<Node> parameterNodes = Lists.newArrayList(type.getParameters());
+    List<FunctionType.Parameter> parameterNodes = Lists.newArrayList(type.getParameters());
     List<Detail> details = new ArrayList<>(parameterNodes.size());
     @Nullable Node paramList = findParamList(node);
 
@@ -926,7 +926,7 @@ final class TypeInspector {
     TypeExpressionParser parser = expressionParserFactory.create(factory);
     for (int i = 0; i < parameterNodes.size(); i++) {
       Detail.Builder detail = Detail.newBuilder().setName("arg" + i);
-      Node parameterNode = parameterNodes.get(i);
+      FunctionType.Parameter parameterNode = parameterNodes.get(i);
 
       JSType parameterType = parameterNode.getJSType();
       if (parameterType == null || parameterType.isUnknownType()) {

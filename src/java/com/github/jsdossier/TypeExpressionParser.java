@@ -234,23 +234,23 @@ final class TypeExpressionParser {
         expressions.removeLast();
       }
 
-      for (Node node : type.getParameters()) {
+      for (FunctionType.Parameter node : type.getParameters()) {
         TypeExpression.Builder parameterType = functionType.addParameterBuilder();
         expressions.addLast(parameterType);
 
-        if (node.isVarArgs()) {
+        if (node.isVariadic()) {
           parameterType.setIsVarargs(true);
         }
 
         if (node.getJSType() != null) {
           if (node.getJSType().isUnionType()) {
-            caseUnionType((UnionType) node.getJSType(), node.isOptionalArg());
+            caseUnionType((UnionType) node.getJSType(), node.isOptional());
           } else {
             node.getJSType().visit(this);
           }
         }
 
-        if (node.isOptionalArg()) {
+        if (node.isOptional()) {
           // Not sure if this is possible, but varargs implies optional and we only permit one
           // bit to be set.
           if (!parameterType.getIsVarargs()) {
@@ -406,6 +406,14 @@ final class TypeExpressionParser {
     @Override
     public Void caseNumberType() {
       appendNativeType("number");
+      return null;
+    }
+
+    @Override
+    public Void caseBigIntType() {
+      // bigint is a primitive, but the compiler's extern-link table (LinkFactory's
+      // EXTERN_TYPE_REFERENCES) has no "bigint" entry, so appendNativeType("bigint") would
+      // NPE on checkNotNull. Mirror caseSymbolType(), the sibling primitive that emits nothing.
       return null;
     }
 

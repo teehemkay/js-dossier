@@ -36,7 +36,7 @@ import com.google.javascript.jscomp.CommandLineRunner;
 import com.google.javascript.jscomp.CompilerOptions;
 import com.google.javascript.jscomp.FlagUsageException;
 import com.google.javascript.jscomp.SourceFile;
-import com.google.javascript.jscomp.WhitelistWarningsGuard;
+import com.google.javascript.jscomp.AllowlistWarningsGuard;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -135,8 +135,8 @@ public final class DossierCommandLineRunner extends CommandLineRunner implements
   }
 
   @Override
-  protected void addWhitelistWarningsGuard(CompilerOptions options, File whitelistFile) {
-    options.addWarningsGuard(WhitelistWarningsGuard.fromFile(whitelistFile));
+  protected void addAllowlistWarningsGuard(CompilerOptions options, File whitelistFile) {
+    options.addWarningsGuard(AllowlistWarningsGuard.fromFile(whitelistFile));
   }
 
   @Override

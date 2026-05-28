@@ -135,7 +135,7 @@ public final class TypeCollectionPass implements CompilerPass {
     public void crawl(JSType type) {
       type.visit(this);
       if ((type.isNominalType() && !type.isInstanceType())
-          || type.isNominalConstructor()
+          || type.isNominalConstructorOrInterface()
           || type.isEnumType()) {
         externs.add(type);
       }
@@ -213,6 +213,11 @@ public final class TypeCollectionPass implements CompilerPass {
 
     @Override
     public Object caseNumberType() {
+      return null;
+    }
+
+    @Override
+    public Object caseBigIntType() {
       return null;
     }
 
