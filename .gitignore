@@ -17,5 +17,5 @@ out.zip
 out/
 package-lock.json
 target/
-build/
+build-gradle/
 .gradle/

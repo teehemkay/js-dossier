@@ -1,6 +1,12 @@
 plugins {
     id 'java'
+    id 'com.google.protobuf' version '0.9.4'
 }
+
+// macOS is case-insensitive, so Gradle's default `build/` output dir collides
+// with the repo's tracked Bazel `BUILD` file. Relocate Gradle's output instead
+// of touching BUILD (which the spike must leave intact).
+layout.buildDirectory.set(layout.projectDirectory.dir('build-gradle'))
 
 repositories {
     mavenCentral()
@@ -14,6 +20,17 @@ java {
 sourceSets {
     main {
         java { srcDirs = ['src/java'] }
+        proto {
+            // Compile our 3 protos from a staged tree (see stageProtos) whose
+            // layout lets the single import root (this dir) resolve their
+            // repo-root-relative imports (import "src/proto/expression.proto").
+            // The html-types proto is supplied import-only via addIncludeDir
+            // below, so protoc does NOT generate its Java — those classes come
+            // from the Maven 'types' jar, and regenerating them would collide
+            // in the fat jar (the sealing-violation hazard the Bazel BUILD
+            // warns about).
+            srcDirs = ['build-gradle/proto-src']
+        }
         resources {
             srcDirs = ['src/java']
             include '**/*.soy'
@@ -37,7 +54,38 @@ dependencies {
     implementation 'org.jsoup:jsoup:1.8.3'
     implementation 'com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer:r239'
     implementation 'com.google.protobuf:protobuf-java:3.9.0'
-    implementation 'com.google.code.gson:gson:2.8.5'
-    implementation 'com.google.common.html.types:types:1.0.8'
+    // gson, types, guice-multibindings versions traced to the rules_closure
+    // pin (b2a6fb7, 2019-08-05): gson 2.7, guice-multibindings 4.1.0. The
+    // html-types Java jar wasn't pinned by rules_closure; soy pulls types:1.0.6
+    // transitively, which is what the original build used.
+    implementation 'com.google.code.gson:gson:2.7'
+    implementation 'com.google.common.html.types:types:1.0.6'
     implementation 'javax.inject:javax.inject:1'
+}
+
+protobuf {
+    // protoc 3.9.0 (2019) ships no osx-aarch_64 build; force the x86_64 binary,
+    // which runs under Rosetta 2. Keeps the exact protoc version 0.15.0 used.
+    protoc { artifact = 'com.google.protobuf:protoc:3.9.0:osx-x86_64@exe' }
+    generateProtoTasks {
+        all().configureEach { task ->
+            task.dependsOn 'stageProtos'
+            // Supply the html-types proto import-only (-I third_party resolves
+            // import "webutil/html/types/proto/html.proto"). Because it is not
+            // a compile input, protoc generates no Java for it. The file is
+            // byte-identical to the one rules_closure pinned (safe-html-types
+            // release-1.0.5, sha256 6ece202f...).
+            task.addIncludeDir(files('third_party'))
+        }
+    }
+}
+
+// Stage only our 3 protos under src/proto/ so the single import root
+// (build-gradle/proto-src) resolves their repo-root-relative imports without
+// putting the repo root itself on the path — which would overlap the plugin's
+// build-gradle/extracted-include-protos dir and make protoc double-load the
+// bundled well-known protos.
+tasks.register('stageProtos', Copy) {
+    into layout.buildDirectory.dir('proto-src')
+    from('src/proto') { into 'src/proto'; include '*.proto' }
 }
