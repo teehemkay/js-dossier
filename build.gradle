@@ -1,6 +1,8 @@
 plugins {
     id 'java'
     id 'com.google.protobuf' version '0.9.4'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'application'
 }
 
 // macOS is case-insensitive, so Gradle's default `build/` output dir collides
@@ -115,7 +117,28 @@ tasks.register('stageProtos', Copy) {
 tasks.named('compileJava') { dependsOn 'generateProto' }
 
 tasks.named('processResources') {
+    // The protobuf plugin registers the proto source dir (proto-src, produced
+    // by stageProtos) as a resources input; declare the dependency. Our
+    // resource include filters don't match *.proto, so dossier's own protos are
+    // not packaged — matching the npm 0.15.0 jar (which carries only
+    // closure-compiler's protos, via the closure jar through shadow).
+    dependsOn 'stageProtos'
     // src/java and the extracted prebuilt tree both carry an (identical)
     // dossier.css; prefer the prebuilt jar copy. It's the only overlap.
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+application {
+    mainClass = 'com.github.jsdossier.Main'
+}
+
+shadowJar {
+    archiveBaseName = 'dossier'
+    archiveClassifier = 'all'
+    archiveVersion = ''
+    mergeServiceFiles()
+    // The protobuf plugin bundles the staged proto sources; drop dossier's own
+    // protos so the jar matches the npm 0.15.0 jar (which carries only
+    // closure-compiler's protos, merged in from the closure jar).
+    exclude 'src/proto/**'
 }
