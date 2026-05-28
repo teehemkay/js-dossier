@@ -19,7 +19,18 @@ java {
 
 sourceSets {
     main {
-        java { srcDirs = ['src/java'] }
+        java {
+            srcDirs = ['src/java']
+            // The testing/ package is test-only scaffolding (depends on
+            // JUnit/Truth); Bazel builds it as a separate target, not part of
+            // the dossier binary. Keep it out of the main jar.
+            exclude 'com/github/jsdossier/testing/**'
+            // With our customized proto source set the plugin's auto-wiring of
+            // generated sources into main.java doesn't take effect, so add the
+            // generated proto output explicitly (compileJava dependsOn
+            // generateProto is wired below).
+            srcDir layout.buildDirectory.dir('generated/source/proto/main/java')
+        }
         proto {
             // Compile our 3 protos from a staged tree (see stageProtos) whose
             // layout lets the single import root (this dir) resolve their
@@ -61,6 +72,15 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.7'
     implementation 'com.google.common.html.types:types:1.0.6'
     implementation 'javax.inject:javax.inject:1'
+
+    annotationProcessor 'com.google.auto.factory:auto-factory:1.0-beta6'
+    annotationProcessor 'com.google.auto.value:auto-value:1.6.3'
+    annotationProcessor 'com.google.auto.service:auto-service:1.0-rc4'
+    compileOnly 'com.google.auto.factory:auto-factory:1.0-beta6'
+    compileOnly 'com.google.auto.value:auto-value-annotations:1.6.3'
+    // auto-service-annotations was only split out in 1.0-rc6+; at rc4 the
+    // @AutoService annotation ships in the main auto-service jar.
+    compileOnly 'com.google.auto.service:auto-service:1.0-rc4'
 }
 
 protobuf {
@@ -89,3 +109,5 @@ tasks.register('stageProtos', Copy) {
     into layout.buildDirectory.dir('proto-src')
     from('src/proto') { into 'src/proto'; include '*.proto' }
 }
+
+tasks.named('compileJava') { dependsOn 'generateProto' }
