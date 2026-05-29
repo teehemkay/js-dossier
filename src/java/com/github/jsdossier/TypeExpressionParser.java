@@ -179,7 +179,10 @@ final class TypeExpressionParser {
 
     @Override
     public Void caseNoType(NoType type) {
-      throw new UnsupportedOperationException();
+      // NoType is closure-compiler's bottom type; it reaches the renderer for
+      // degenerate/unresolvable positions. Render as unknown rather than crash.
+      currentExpression().setUnknownType(true);
+      return null;
     }
 
     @Override
@@ -208,7 +211,8 @@ final class TypeExpressionParser {
 
     @Override
     public Void caseNoObjectType() {
-      throw new UnsupportedOperationException();
+      currentExpression().setUnknownType(true);
+      return null;
     }
 
     @Override
