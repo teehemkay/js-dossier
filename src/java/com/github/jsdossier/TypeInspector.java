@@ -936,8 +936,17 @@ final class TypeInspector {
       }
 
       if (paramList != null && i < paramList.getChildCount()) {
-        String name = paramList.getChildAtIndex(i).getString();
-        detail.setName(name);
+        // ES6 params: `x = default` (DEFAULT_VALUE) and `...rest` (ITER_REST) wrap
+        // the binding in a child; destructuring patterns have no single name. Only
+        // NAME nodes carry a string, so unwrap then guard — getString() throws
+        // UnsupportedOperationException on any non-string node.
+        Node paramNode = paramList.getChildAtIndex(i);
+        if (paramNode.isDefaultValue() || paramNode.isRest()) {
+          paramNode = paramNode.getFirstChild();
+        }
+        if (paramNode != null && paramNode.isName()) {
+          detail.setName(paramNode.getString());
+        }
       }
       details.add(detail.build());
     }
