@@ -21,6 +21,7 @@ import com.google.javascript.rhino.JSDocInfo.Marker;
 import com.google.javascript.rhino.JSTypeExpression;
 import com.google.javascript.rhino.jstype.JSType;
 import com.google.javascript.rhino.jstype.JSTypeRegistry;
+import com.google.javascript.rhino.jstype.JSTypeResolver;
 import com.google.javascript.rhino.jstype.StaticTypedScope;
 import java.nio.file.Path;
 import java.util.ConcurrentModificationException;
@@ -110,6 +111,19 @@ public final class Types {
       JSTypeExpression expression, StaticTypedScope scope, JSTypeRegistry registry) {
     synchronized (EVALUATION_LOCK) {
       return expression.evaluate(scope, registry);
+    }
+  }
+
+  // SPIKE STAGE B (Option iv): run a body inside ONE open resolver scope under the lock. Nested
+  // Types.evaluate calls re-enter EVALUATION_LOCK reentrantly (same thread) and do NOT open the
+  // resolver (baseline body), so they queue inside this single open scope and batch-resolve on
+  // close.
+  public static <T> T withResolverScope(
+      JSTypeRegistry registry, java.util.function.Supplier<T> body) {
+    synchronized (EVALUATION_LOCK) {
+      try (JSTypeResolver.Closer c = registry.getResolver().openForDefinition()) {
+        return body.get();
+      }
     }
   }
 }

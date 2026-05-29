@@ -176,6 +176,13 @@ final class RenderDocumentationTaskSupplier implements Supplier<ImmutableList<Re
     }
 
     JsType buildJsType() {
+      // SPIKE STAGE B (Option iv): run the whole per-type build inside ONE open resolver scope,
+      // held under EVALUATION_LOCK. All render-path Types.evaluate calls for this type (the
+      // TypeInspector helper and addTypedefInfo) nest inside this single open scope.
+      return Types.withResolverScope(jsRegistry, this::buildJsTypeBody);
+    }
+
+    private JsType buildJsTypeBody() {
       JsType.Builder typeSpec =
           JsType.newBuilder()
               .setName(dfs.getDisplayName(type))
